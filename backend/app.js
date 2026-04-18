@@ -7,7 +7,37 @@ const bodyParser = require("body-parser");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 const { apiLimiter, authLimiter, sensitiveOpLimiter } = require("./middleware");
+const{User} = require("./models");
+async function createFixedAdmin() {
+  try {
+    const adminEmail = "admin@admin.com";
+    
+    const existingAdmin = await User.findOne({ email: adminEmail });
 
+    if (existingAdmin) {
+      console.log("✅ Admin user already exists. Skipping creation.");
+      return; 
+    }
+
+    // Create the admin with your exact fields
+    const newAdmin = new User({
+      name: "admin",
+      email: adminEmail,
+      password: "adminadmin", // Replace this with the real password you want to log in with
+      role: "admin"
+    });
+
+    // Mongoose creates the _id and __v
+    // Mongoose { timestamps: true } creates createdAt & updatedAt
+    // The pre-save hook turns the plain password into the $2b$10... hash
+    await newAdmin.save();
+    
+    console.log("🚀 Fixed Admin account created successfully!");
+
+  } catch (error) {
+    console.error("Error creating admin account:", error);
+  }
+}
 const {
   authRoutes,
   seekerProfileRoutes,
@@ -63,7 +93,11 @@ app.use("/api/connections", connectionRoutes);
 if (!mongoose.connection.readyState) {
   mongoose
     .connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB connected successfully!"))
+    .then(() => {
+      console.log("MongoDB connected successfully!")
+    
+      createFixedAdmin()
+    })
     .catch((err) => console.log("MongoDB connection error:", err));
 }
 
